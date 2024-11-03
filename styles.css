@@ -88,13 +88,37 @@ nav {
 }
 
 .hero-content h1 {
-    font-size: 4.5rem;
-    margin-bottom: 1.5rem;
-    background: linear-gradient(45deg, #2196F3, #4A90E2);
+    font-size: 4rem; /* Adjust as needed */
+    line-height: 1.2;
+    margin-bottom: 1rem;
+    background: linear-gradient(to right, #4a90e2, #63b3ed); /* Adjust these colors to match your original design */
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    position: relative;
-    z-index: 2;
+    background-clip: text;
+    color: transparent;
+    display: inline-block; /* This is important for the gradient to work */
+}
+
+.hero-content h1 .line1,
+.hero-content h1 .line2 {
+    display: block;
+}
+
+.hero-content h1 .line2 {
+    font-size: 0.8em; /* Makes "Not Harder" slightly smaller */
+}
+
+.hero-content h1 .line1 {
+    background: linear-gradient(to right, #4a90e2, #63b3ed); /* Adjust these colors */
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.hero-content h1 .line2 {
+    background: linear-gradient(to right, #63b3ed, #4a90e2); /* Adjust these colors */
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 .hero-content p {
@@ -350,9 +374,46 @@ footer {
     color: var(--primary-color);
 }
 
+.social-links {
+    display: flex;
+    gap: 1.2rem;
+    margin-top: 0.5rem;
+}
+
 .social-links a {
-    margin-right: 1rem;
-    font-size: 1.5rem;
+    color: var(--text-color);
+    font-size: 1.3rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.social-links a:hover {
+    color: var(--primary-color);
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Individual social media hover colors */
+.social-links a:hover .fa-twitter {
+    color: #1DA1F2;
+}
+
+.social-links a:hover .fa-linkedin {
+    color: #0077B5;
+}
+
+.social-links a:hover .fa-instagram {
+    color: #E4405F;
+}
+
+.social-links a:hover .fa-github {
+    color: #333;
 }
 
 .footer-bottom {
@@ -424,19 +485,55 @@ footer {
 }
 
 /* Responsive Design */
+/* Tablet Devices (768px to 1024px) */
+@media (max-width: 1024px) {
+    .hero-content h1 {
+        font-size: 3.5rem;
+    }
+    
+    .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .demo-container {
+        gap: 1.5rem;
+    }
+}
+
+/* Mobile Devices (up to 768px) */
 @media (max-width: 768px) {
     nav {
         padding: 1rem 5%;
     }
     
     .nav-links {
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 1rem;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         display: none;
+    }
+    
+    .nav-links.active {
+        display: flex;
+    }
+    
+    .hamburger-menu {
+        display: block;
+        cursor: pointer;
     }
     
     .hero {
         flex-direction: column;
         text-align: center;
-        padding-top: 100px;
+        padding-top: 80px;
+        gap: 2rem;
     }
     
     .hero-content {
@@ -444,11 +541,23 @@ footer {
     }
     
     .hero-content h1 {
-        font-size: 3rem;
+        font-size: 2.5rem;
+        line-height: 1.2;
+    }
+    
+    .hero-content p {
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
     }
     
     .hero-image {
-        margin-top: 2rem;
+        margin-top: 1rem;
+        padding: 0 1rem;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
     }
     
     .demo-container {
@@ -458,11 +567,454 @@ footer {
     .contact-form {
         flex-direction: column;
         padding: 0 1rem;
+        gap: 0.8rem;
+    }
+    
+    .button-container {
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 2.5rem;
     }
 }
+
+/* Small Mobile Devices (up to 480px) */
+@media (max-width: 480px) {
+    .hero-content h1 {
+        font-size: 2rem;
+    }
+    
+    .cta-btn {
+        padding: 0.8rem 2rem;
+        font-size: 1rem;
+    }
+    
+    .feature-card {
+        padding: 1.5rem;
+    }
+    
+    .feature-card h3 {
+        font-size: 1.2rem;
+    }
+    
+    .footer-content {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+    
+    .social-links {
+        justify-content: center;
+    }
+}
+* Handle device orientation */
+@media (max-height: 600px) and (orientation: landscape) {
+    .hero {
+        padding-top: 100px;
+        min-height: 120vh;
+    }
+    
+    .hero-content h1 {
+        font-size: 2rem;
+    }
+}
+
 
 /* Hide loading overlay when content is loaded */
 body.loaded .loading-overlay {
     opacity: 0;
     pointer-events: none;
+}
+/* Feedback Button */
+.feedback-btn {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    padding: 12px 20px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+    transition: all 0.3s ease;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px); /* Start slightly below final position */
+}
+
+.feedback-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
+}
+
+/* Feedback Modal */
+.feedback-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.feedback-modal.active {
+    display: flex;
+}
+
+.feedback-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    animation: modalSlideIn 0.3s ease;
+}
+
+.close-modal {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.3s ease;
+}
+
+.close-modal:hover {
+    color: var(--accent-color);
+}
+
+.feedback-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.feedback-form h3 {
+    margin-bottom: 1rem;
+    color: var(--secondary-color);
+}
+
+.feedback-form textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #eef2f5;
+    border-radius: 10px;
+    resize: vertical;
+    min-height: 120px;
+    font-family: inherit;
+    transition: border-color 0.3s ease;
+}
+
+.feedback-form textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.feedback-form button {
+    padding: 0.8rem 1.5rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    align-self: flex-end;
+}
+
+.feedback-form button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile Responsiveness for Feedback */
+@media (max-width: 768px) {
+    .feedback-btn {
+        right: 10px;
+        bottom: 10px;
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+
+    .feedback-content {
+        width: 95%;
+        padding: 1.5rem;
+    }
+}
+
+/* Login Modal */
+.login-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-modal.active {
+    display: flex;
+}
+
+.login-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 400px;
+    position: relative;
+    animation: modalSlideIn 0.3s ease;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.login-form input {
+    padding: 0.8rem 1rem;
+    border: 2px solid #eef2f5;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.login-form input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.forgot-password {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.forgot-password:hover {
+    text-decoration: underline;
+}
+
+.signup-link {
+    text-align: center;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eef2f5;
+    font-size: 0.9rem;
+}
+
+.signup-link a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.signup-link a:hover {
+    text-decoration: underline;
+}
+
+/* Mobile Responsiveness for Login */
+@media (max-width: 768px) {
+    .login-content {
+        width: 95%;
+        padding: 1.5rem;
+    }
+}
+
+.login-form button {
+    padding: 0.8rem 1.5rem;
+    background: linear-gradient(-45deg, #4A90E2, #63B3ED);
+    background-size: 200% auto;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.login-form button:hover {
+    background-position: right center;
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
+}
+
+.login-form button:active {
+    transform: translateY(1px);
+}
+
+/* Add loading state for button */
+.login-form button.loading {
+    position: relative;
+    color: transparent;
+}
+
+.login-form button.loading::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 20px;
+    height: 20px;
+    border: 2px solid white;
+    border-top-color: transparent;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: spin 1s linear infinite;
+}
+
+/* Footer Sections */
+.footer-section {
+    flex: 1;
+    min-width: 250px;
+    padding: 1rem;
+}
+
+.footer-section h4 {
+    color: #ffffff;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    position: relative;
+    display: inline-block;
+}
+
+.footer-section:nth-child(2) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.footer-section:nth-child(2) .quick-links-container {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.footer-section a:not(.social-links a) {
+    display: inline-flex;
+    align-items: center;
+    color: #ffffff;
+    text-decoration: none;
+    padding: 0.5rem 1.2rem;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    margin: 0.4rem;
+    font-weight: 500;
+}
+
+.footer-section a:not(.social-links a):hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+}
+
+.footer-section p {
+    line-height: 1.6;
+    color: #ffffff;
+    opacity: 0.9;
+    margin-top: 1rem;
+    padding: 0.8rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+}
+
+.footer-bottom p {
+    color: #ffffff;
+    opacity: 0.8;
+}
+
+/* Emotion Detection Styles */
+.demo-video {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+#webcam, #output-canvas {
+    width: 100%;
+    border-radius: 15px;
+    background: #000;
+}
+
+#output-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#detection-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 1rem;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+#detection-list li {
+    padding: 10px;
+    margin-bottom: 8px;
+    background: #f8fafc;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+#posture-label {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.emotion-bar-container {
+    width: 150px;
+    height: 10px;
+    background: #eef2f5;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.emotion-bar {
+    height: 100%;
+    background: linear-gradient(45deg, #4A90E2, #63B3ED);
+    border-radius: 5px;
+    transition: width 0.3s ease;
 }
