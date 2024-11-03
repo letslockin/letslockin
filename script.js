@@ -537,6 +537,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     initFeedback();
     initLogin();
 
+    // Add Get Started button functionality
+    const getStartedBtn = document.querySelector('.hero-content .cta-btn');
+    if (getStartedBtn) {
+        getStartedBtn.addEventListener('click', () => {
+            const featuresSection = document.querySelector('#features');
+            if (featuresSection) {
+                smoothScroll(featuresSection);
+            }
+        });
+    }
+
     // Add PostureDetector initialization
     try {
         const detector = new PostureDetector();
