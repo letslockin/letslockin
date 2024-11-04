@@ -359,7 +359,7 @@ function initLogin() {
 class PostureDetector {
     constructor() {
         this.model = null;
-        this.blazeface = null;
+        this.facemesh = null;
         this.webcam = null;
         this.canvas = null;
         this.ctx = null;
@@ -373,11 +373,18 @@ class PostureDetector {
             5: 'Disgusted',
             6: 'Angry'
         };
+        this.lastDrawTime = 0;
+        this.frameInterval = 1000 / 10; // Limit to 10 FPS
+        this.lastUIUpdate = 0;
+        this.uiUpdateInterval = 100; // Reduce to 100ms (was 200ms)
+        this.emotionBuffer = [];
+        this.distanceBuffer = [];
+        this.bufferSize = 2;  // Reduce buffer size (was 3)
     }
 
     async init() {
         try {
-            // Setup webcam first
+            // Setup webcam and canvas
             this.webcam = document.getElementById('webcam');
             this.canvas = document.getElementById('output-canvas');
             
@@ -386,20 +393,17 @@ class PostureDetector {
             }
 
             this.ctx = this.canvas.getContext('2d');
-
-            // Set initial canvas size
             this.canvas.width = 640;
             this.canvas.height = 480;
 
-            // Load Blazeface model
-            this.blazeface = await blazeface.load();
+            // Load Facemesh instead of Blazeface
+            this.facemesh = await faceLandmarksDetection.load(
+                faceLandmarksDetection.SupportedPackages.mediapipeFacemesh
+            );
 
             // Request webcam access
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
-                }
+                video: { width: { ideal: 640 }, height: { ideal: 480 } }
             });
             
             this.webcam.srcObject = stream;
@@ -429,105 +433,114 @@ class PostureDetector {
         }
     }
 
-    async detectLoop() {
+    async detectLoop(timestamp) {
         if (!this.isRunning) return;
 
         try {
             if (this.webcam.readyState === this.webcam.HAVE_ENOUGH_DATA) {
-                // Draw current frame to main canvas
                 this.ctx.drawImage(this.webcam, 0, 0);
 
-                const predictions = await this.blazeface.estimateFaces(this.webcam, false);
+                const predictions = await this.facemesh.estimateFaces({
+                    input: this.webcam,
+                    returnTensors: false,
+                    flipHorizontal: false,
+                    predictIrises: false
+                });
 
                 if (predictions.length > 0) {
                     const face = predictions[0];
-                    
-                    // Get face coordinates
-                    let [x, y] = face.topLeft.map(Math.round);
-                    let [endX, endY] = face.bottomRight.map(Math.round);
-                    let width = endX - x;
-                    let height = endY - y;
+                    const landmarks = face.scaledMesh;
+                    const coords = landmarks.reduce((acc, point) => {
+                        acc.minX = Math.min(acc.minX, point[0]);
+                        acc.minY = Math.min(acc.minY, point[1]);
+                        acc.maxX = Math.max(acc.maxX, point[0]);
+                        acc.maxY = Math.max(acc.maxY, point[1]);
+                        return acc;
+                    }, { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
 
-                    // Adjust to 80% of the width
-                    const widthReduction = width * 0.2; // 20% reduction
-                    x += widthReduction / 2; // Center the reduced width
-                    width = width * 0.8; // 80% of original width
+                    let x = Math.round(coords.minX);
+                    let y = Math.round(coords.minY);
+                    let width = Math.round(coords.maxX - coords.minX);
+                    let height = Math.round(coords.maxY - coords.minY);
 
-                    // Ensure coordinates are within bounds
-                    x = Math.max(0, x);
-                    y = Math.max(0, y);
+                    // Ensure coordinates are valid
+                    x = Math.max(0, Math.min(x, this.canvas.width - width));
+                    y = Math.max(0, Math.min(y, this.canvas.height - height));
                     width = Math.min(width, this.canvas.width - x);
                     height = Math.min(height, this.canvas.height - y);
 
-                    // Draw face detection box (for visualization)
+                    // Draw face detection box
                     this.ctx.strokeStyle = '#00ff00';
                     this.ctx.lineWidth = 2;
                     this.ctx.strokeRect(x, y, width, height);
 
-                    // Create temporary canvas for face region
+                    // Create a temporary canvas for the face region
                     const faceCanvas = document.createElement('canvas');
-                    faceCanvas.width = width;
-                    faceCanvas.height = height;
+                    faceCanvas.width = 160;  // Set to final size directly
+                    faceCanvas.height = 160;
                     const faceCtx = faceCanvas.getContext('2d');
 
-                    // Draw only the face region to the temporary canvas
+                    // Draw the face region directly at the target size
                     faceCtx.drawImage(
-                        this.webcam,     // source
-                        x, y,            // source x, y
-                        width, height,   // source width, height
-                        0, 0,            // destination x, y
-                        width, height    // destination width, height
+                        this.webcam,
+                        x, y, width, height,  // Source coordinates
+                        0, 0, 160, 160        // Destination coordinates
                     );
 
-                    // Process the face for emotion detection
+                    // Process for emotion detection
                     const emotionPrediction = tf.tidy(() => {
-                        const faceTensor = tf.browser.fromPixels(faceCanvas)
+                        return tf.browser.fromPixels(faceCanvas)
                             .mean(2)
                             .toFloat()
-                            .expandDims(-1);
-                        const resized = tf.image.resizeBilinear(faceTensor, [160, 160]);
-                        const normalized = resized.div(255.0);
-                        return normalized.expandDims(0);
+                            .expandDims(-1)
+                            .expandDims(0)
+                            .div(255.0);
                     });
 
-                    // Get predictions
                     const prediction = await this.model.predict(emotionPrediction);
                     const probabilities = await prediction.data();
 
-                    // Calculate distance for posture
                     const distance = this.calculateFaceDistance(
-                        width,
-                        height,
+                        width, height,
                         this.webcam.videoWidth,
                         this.webcam.videoHeight
                     );
 
-                    // Process results
                     const emotionConfidences = Object.entries(this.emotionMap)
                         .map(([index, emotion]) => ({
                             emotion,
                             confidence: probabilities[index]
-                        }))
-                        .sort((a, b) => b.confidence - a.confidence);
+                        }));
 
-                    // Update UI
                     this.updateUI(emotionConfidences, distance);
 
-                    // Cleanup tensors
+                    // Cleanup
                     tf.dispose([emotionPrediction, prediction]);
-                } else {
-                    this.updateUI([], 0);
+                    faceCanvas.remove();
                 }
             }
         } catch (error) {
             console.error('Detection loop error:', error);
         }
 
-        requestAnimationFrame(() => this.detectLoop());
+        requestAnimationFrame((timestamp) => this.detectLoop(timestamp));
     }
 
     updateUI(emotionConfidences, distance) {
-        // Update posture status based on distance
+        const now = performance.now();
+        if (now - this.lastUIUpdate < this.uiUpdateInterval) {
+            // Buffer the readings
+            this.emotionBuffer.push(emotionConfidences);
+            this.distanceBuffer.push(distance);
+            if (this.emotionBuffer.length > this.bufferSize) {
+                this.emotionBuffer.shift();
+                this.distanceBuffer.shift();
+            }
+            return;
+        }
+        this.lastUIUpdate = now;
+
+        // Update posture immediately
         const postureLabel = document.getElementById('posture-label');
         const confidenceBar = document.getElementById('posture-confidence');
         
@@ -542,30 +555,40 @@ class PostureDetector {
         
         if (postureLabel && confidenceBar) {
             postureLabel.textContent = postureStatus;
-            // Scale the distance to a maximum of 30%
             const scaledWidth = Math.min(100, (distance / 25) * 100);
             confidenceBar.style.width = `${scaledWidth}%`;
         }
 
-        // Update emotion predictions
+        // Update emotions list - show only top 3
         const detectionList = document.getElementById('detection-list');
         if (detectionList) {
-            detectionList.innerHTML = ''; // Clear existing items
+            const sortedEmotions = emotionConfidences
+                .sort((a, b) => b.confidence - a.confidence)
+                .slice(0, 3); // Only show top 3 emotions
+
+            const fragment = document.createDocumentFragment();
             
-            emotionConfidences.forEach(({emotion, confidence}) => {
+            sortedEmotions.forEach(({emotion, confidence}) => {
                 const listItem = document.createElement('li');
                 listItem.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span>${emotion}</span>
-                        <div class="emotion-bar-container" style="flex-grow: 1; margin: 0 10px;">
-                            <div class="emotion-bar" style="width: ${confidence * 100}%; background: #4A90E2;"></div>
+                        <div class="emotion-bar-container">
+                            <div class="emotion-bar" style="width: ${confidence * 100}%;"></div>
                         </div>
                         <span>${(confidence * 100).toFixed(1)}%</span>
                     </div>
                 `;
-                detectionList.appendChild(listItem);
+                fragment.appendChild(listItem);
             });
+
+            detectionList.innerHTML = '';
+            detectionList.appendChild(fragment);
         }
+
+        // Clear buffers
+        this.emotionBuffer = [];
+        this.distanceBuffer = [];
     }
 
     stop() {
