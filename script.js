@@ -1,5 +1,9 @@
 // Initialize GSAP
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
+
 gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollToPlugin);
+
 
 class Particle {
     constructor(container) {
@@ -134,9 +138,12 @@ class ParticleSystem {
 
 // Smooth scroll handling
 const smoothScroll = (target) => {
+    const offset = 80; // Adjust this value based on your navbar height
+    const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - offset;
+    
     gsap.to(window, {
         duration: 1,
-        scrollTo: target,
+        scrollTo: { y: targetPosition, autoKill: false },
         ease: 'power2.inOut'
     });
 };
@@ -352,6 +359,7 @@ function initLogin() {
 class PostureDetector {
     constructor() {
         this.model = null;
+        this.blazeface = null;
         this.webcam = null;
         this.canvas = null;
         this.ctx = null;
@@ -369,38 +377,47 @@ class PostureDetector {
 
     async init() {
         try {
-            // Load the model
-            this.model = await tf.loadLayersModel('tf2js_model/model.json');
-            console.log('Model loaded successfully');
-
-            // Setup webcam
+            // Setup webcam first
             this.webcam = document.getElementById('webcam');
             this.canvas = document.getElementById('output-canvas');
             
             if (!this.webcam || !this.canvas) {
-                console.error('Required elements not found');
-                return;
+                throw new Error('Required elements not found');
             }
 
             this.ctx = this.canvas.getContext('2d');
 
+            // Set initial canvas size
+            this.canvas.width = 640;
+            this.canvas.height = 480;
+
+            // Load Blazeface model
+            this.blazeface = await blazeface.load();
+
             // Request webcam access
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    width: 640,
-                    height: 480
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
                 }
             });
+            
             this.webcam.srcObject = stream;
-
+            
             // Wait for video to be ready
             await new Promise(resolve => {
                 this.webcam.onloadedmetadata = () => {
                     this.canvas.width = this.webcam.videoWidth;
                     this.canvas.height = this.webcam.videoHeight;
+                    this.webcam.play();
                     resolve();
                 };
             });
+
+            // Load the emotion model
+            this.model = await tf.loadLayersModel('tf2js_model/model.json');
+            
+            console.log('All models loaded successfully');
 
             // Start detection loop
             this.isRunning = true;
@@ -412,68 +429,98 @@ class PostureDetector {
         }
     }
 
-    calculateFaceDistance(faceWidth, faceHeight, frameWidth, frameHeight) {
-        const cameraSize = frameWidth * frameHeight;
-        const faceArea = faceWidth * faceHeight;
-        return (faceArea * 100) / cameraSize;
-    }
-
     async detectLoop() {
         if (!this.isRunning) return;
 
         try {
-            // Get video frame and convert to grayscale
-            const videoFrame = tf.tidy(() => {
-                const frame = tf.browser.fromPixels(this.webcam);
-                
-                // Get frame dimensions
-                const frameWidth = frame.shape[1];
-                const frameHeight = frame.shape[0];
-                
-                // Calculate face area (you'll need to implement face detection here)
-                // For now, let's assume the face takes up 1/4 of the frame
-                const faceWidth = frameWidth / 2;
-                const faceHeight = frameHeight / 2;
-                
-                // Calculate distance
-                const distance = this.calculateFaceDistance(faceWidth, faceHeight, frameWidth, frameHeight);
-                
-                // Store distance for UI updates
-                this.currentDistance = distance;
+            if (this.webcam.readyState === this.webcam.HAVE_ENOUGH_DATA) {
+                // Draw current frame to main canvas
+                this.ctx.drawImage(this.webcam, 0, 0);
 
-                // Convert to grayscale and preprocess
-                const grayscale = frame.mean(2)
-                                     .toFloat()
-                                     .expandDims(-1);
-                const resized = tf.image.resizeBilinear(grayscale, [160, 160]);
-                const normalized = resized.div(255.0);
-                return normalized.expandDims(0);
-            });
+                const predictions = await this.blazeface.estimateFaces(this.webcam, false);
 
-            // Make prediction
-            const prediction = await this.model.predict(videoFrame);
-            const probabilities = await prediction.data();
+                if (predictions.length > 0) {
+                    const face = predictions[0];
+                    
+                    // Get face coordinates
+                    let [x, y] = face.topLeft.map(Math.round);
+                    let [endX, endY] = face.bottomRight.map(Math.round);
+                    let width = endX - x;
+                    let height = endY - y;
 
-            // Sort emotions by confidence
-            const emotionConfidences = Object.entries(this.emotionMap).map(([index, emotion]) => ({
-                emotion,
-                confidence: probabilities[index]
-            }));
-            
-            emotionConfidences.sort((a, b) => b.confidence - a.confidence);
+                    // Adjust to 80% of the width
+                    const widthReduction = width * 0.2; // 20% reduction
+                    x += widthReduction / 2; // Center the reduced width
+                    width = width * 0.8; // 80% of original width
 
-            // Update UI with posture and emotions
-            this.updateUI(emotionConfidences, this.currentDistance);
+                    // Ensure coordinates are within bounds
+                    x = Math.max(0, x);
+                    y = Math.max(0, y);
+                    width = Math.min(width, this.canvas.width - x);
+                    height = Math.min(height, this.canvas.height - y);
 
-            // Draw frame on canvas
-            this.ctx.drawImage(this.webcam, 0, 0);
+                    // Draw face detection box (for visualization)
+                    this.ctx.strokeStyle = '#00ff00';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(x, y, width, height);
 
-            // Cleanup tensors
-            tf.dispose([videoFrame, prediction]);
+                    // Create temporary canvas for face region
+                    const faceCanvas = document.createElement('canvas');
+                    faceCanvas.width = width;
+                    faceCanvas.height = height;
+                    const faceCtx = faceCanvas.getContext('2d');
 
+                    // Draw only the face region to the temporary canvas
+                    faceCtx.drawImage(
+                        this.webcam,     // source
+                        x, y,            // source x, y
+                        width, height,   // source width, height
+                        0, 0,            // destination x, y
+                        width, height    // destination width, height
+                    );
+
+                    // Process the face for emotion detection
+                    const emotionPrediction = tf.tidy(() => {
+                        const faceTensor = tf.browser.fromPixels(faceCanvas)
+                            .mean(2)
+                            .toFloat()
+                            .expandDims(-1);
+                        const resized = tf.image.resizeBilinear(faceTensor, [160, 160]);
+                        const normalized = resized.div(255.0);
+                        return normalized.expandDims(0);
+                    });
+
+                    // Get predictions
+                    const prediction = await this.model.predict(emotionPrediction);
+                    const probabilities = await prediction.data();
+
+                    // Calculate distance for posture
+                    const distance = this.calculateFaceDistance(
+                        width,
+                        height,
+                        this.webcam.videoWidth,
+                        this.webcam.videoHeight
+                    );
+
+                    // Process results
+                    const emotionConfidences = Object.entries(this.emotionMap)
+                        .map(([index, emotion]) => ({
+                            emotion,
+                            confidence: probabilities[index]
+                        }))
+                        .sort((a, b) => b.confidence - a.confidence);
+
+                    // Update UI
+                    this.updateUI(emotionConfidences, distance);
+
+                    // Cleanup tensors
+                    tf.dispose([emotionPrediction, prediction]);
+                } else {
+                    this.updateUI([], 0);
+                }
+            }
         } catch (error) {
-            console.error('Error in detection loop:', error);
-            console.log('Error details:', error.message);
+            console.error('Detection loop error:', error);
         }
 
         requestAnimationFrame(() => this.detectLoop());
@@ -487,7 +534,7 @@ class PostureDetector {
         let postureStatus = '';
         if (distance <= 7) {
             postureStatus = 'Too far from screen';
-        } else if (distance > 17) {
+        } else if (distance > 18) {
             postureStatus = 'Too close to screen';
         } else {
             postureStatus = 'Good posture';
@@ -495,7 +542,9 @@ class PostureDetector {
         
         if (postureLabel && confidenceBar) {
             postureLabel.textContent = postureStatus;
-            confidenceBar.style.width = `${Math.min(100, distance)}%`;
+            // Scale the distance to a maximum of 30%
+            const scaledWidth = Math.min(100, (distance / 25) * 100);
+            confidenceBar.style.width = `${scaledWidth}%`;
         }
 
         // Update emotion predictions
@@ -524,6 +573,12 @@ class PostureDetector {
         if (this.webcam && this.webcam.srcObject) {
             this.webcam.srcObject.getTracks().forEach(track => track.stop());
         }
+    }
+
+    calculateFaceDistance(faceWidth, faceHeight, frameWidth, frameHeight) {
+        const cameraSize = frameWidth * frameHeight;
+        const faceArea = faceWidth * faceHeight;
+        return (faceArea * 100) / cameraSize;
     }
 }
 
@@ -560,8 +615,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('nav a').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            const target = document.querySelector(link.getAttribute('href'));
-            smoothScroll(target);
+            const targetId = link.getAttribute('href');
+            let target;
+
+            switch(targetId) {
+                case '#home':
+                    target = document.querySelector('.hero');
+                    break;
+                case '#features':
+                    target = document.querySelector('#features');
+                    break;
+                case '#demo':
+                    target = document.querySelector('#demo');
+                    break;
+                case '#contact':
+                    target = document.querySelector('#contact');
+                    break;
+                default:
+                    target = document.querySelector(targetId);
+            }
+
+            if (target) {
+                smoothScroll(target);
+            }
         });
     });
 
