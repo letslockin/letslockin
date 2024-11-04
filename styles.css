@@ -223,9 +223,11 @@ nav {
 
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
-    padding: 2rem 0;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2.5rem;
+    padding: 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
 .feature-card {
@@ -238,25 +240,134 @@ nav {
 }
 
 .feature-card:hover {
-    transform: translateY(-10px);
+    transform: translateY(-15px);
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(145deg, #ffffff, #f5f6fa);
+}
+
+/* Special styling for the featured card (Focus Reinforcement) */
+.feature-card.featured {
+    background: linear-gradient(135deg, #1a3b7d, #2C5EBD, #E67E22);
+    background-size: 200% 200%;
+    animation: gradientShift 15s ease infinite;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Add subtle gradient animation */
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Add gentle shine effect */
+.feature-card.featured::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    transform: rotate(30deg);
+    pointer-events: none;
+}
+
+.feature-card.featured:hover {
+    transform: translateY(-15px) scale(1.05);
+    background: linear-gradient(135deg, #1f4182, #3670c6, #e67e22);
+    box-shadow: 
+        0 20px 40px rgba(74, 144, 226, 0.2),
+        0 10px 20px rgba(255, 153, 102, 0.1);
+}
+
+.feature-card.featured i,
+.feature-card.featured h3,
+.feature-card.featured p {
+    color: white !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    position: relative;
+    z-index: 1;
+}
+
+.feature-card.featured:hover i,
+.feature-card.featured:hover h3,
+.feature-card.featured:hover p {
+    color: white !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.feature-card.featured h3 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 1.2rem;
+}
+
+.feature-card.featured p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    opacity: 0.95;
+}
+
+.feature-card.featured i {
+    color: white;
+    font-size: 3rem;
+    margin-bottom: 2rem;
+    opacity: 0.95;
+}
+
+/* Enhance other cards' hover state */
+.feature-card:not(.featured):hover {
+    transform: translateY(-15px);
+    background: linear-gradient(145deg, #ffffff, #f8f9ff);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Add spacing between cards */
+.features-grid {
+    gap: 2.5rem;
+    padding: 1rem;
 }
 
 .feature-card i {
     font-size: 2.5rem;
     color: var(--primary-color);
     margin-bottom: 1.5rem;
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover i {
+    transform: scale(1.1);
 }
 
 .feature-card h3 {
     font-size: 1.5rem;
     margin-bottom: 1rem;
     color: var(--secondary-color);
+    transition: color 0.3s ease;
 }
 
 .feature-card p {
     color: #666;
     line-height: 1.6;
+    transition: color 0.3s ease;
+}
+
+.feature-card:hover h3 {
+    color: var(--primary-color);
+}
+
+.feature-card:hover p {
+    color: #333;
 }
 
 /* Demo Section */
@@ -301,6 +412,10 @@ nav {
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.stats-panel h3 {
+    margin-bottom: 1.5rem;
 }
 
 .stat-item {
@@ -1052,8 +1167,10 @@ body.loaded .loading-overlay {
 }
 
 #posture-label {
+    font-size: 1.4rem;
     font-weight: 600;
-    color: var(--primary-color);
+    margin: 1.5rem 0;
+    display: block;
 }
 
 .emotion-bar-container {
@@ -1094,5 +1211,107 @@ body.loaded .loading-overlay {
     .demo-video {
         width: 100%;
         max-width: 100%;
+    }
+}
+
+/* Add these styles */
+.demo-start-container {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+/* Initially hide the demo container */
+.demo-container {
+    display: none;
+}
+
+.demo-container.active {
+    display: flex;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .features-grid {
+        grid-template-columns: 1fr; /* Single column for mobile */
+    }
+}
+
+@media (min-width: 1400px) {
+    .features-grid {
+        grid-template-columns: repeat(4, 1fr); /* 4 columns for very large screens */
+    }
+}
+
+/* Update the section titles */
+.real-time-title {
+    margin-bottom: 1.5rem;
+}
+
+.emotions-title {
+    margin: 2rem 0 1.5rem 0;
+}
+
+/* Hamburger Menu Styles */
+.hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 30px;
+    height: 21px;
+    cursor: pointer;
+    z-index: 1001;
+}
+
+.hamburger span {
+    display: block;
+    height: 3px;
+    width: 100%;
+    background-color: var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+/* Mobile Navigation Styles */
+@media (max-width: 768px) {
+    .hamburger {
+        display: flex;
+    }
+
+    .nav-links {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        height: 100vh;
+        width: 70%;
+        background: white;
+        flex-direction: column;
+        padding: 80px 40px;
+        transition: right 0.3s ease;
+        box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-links.active {
+        right: 0;
+    }
+
+    .nav-links a {
+        margin: 1.5rem 0;
+        font-size: 1.1rem;
+    }
+
+    .login-btn {
+        margin: 1.5rem 0;
+    }
+
+    /* Hamburger Animation */
+    .hamburger.active span:nth-child(1) {
+        transform: translateY(9px) rotate(45deg);
+    }
+
+    .hamburger.active span:nth-child(2) {
+        opacity: 0;
+    }
+
+    .hamburger.active span:nth-child(3) {
+        transform: translateY(-9px) rotate(-45deg);
     }
 }

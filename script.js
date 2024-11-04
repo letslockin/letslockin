@@ -76,8 +76,8 @@ class ParticleSystem {
     }
 
     createParticles() {
-        // Create particles based on screen size
-        const particleCount = Math.floor((window.innerWidth * window.innerHeight) / 10000);
+        // Reduce particle count significantly by increasing the divisor
+        const particleCount = Math.floor((window.innerWidth * window.innerHeight) / 25000);
         for (let i = 0; i < particleCount; i++) {
             this.particles.push(new Particle(this.container));
         }
@@ -380,9 +380,12 @@ class PostureDetector {
         this.emotionBuffer = [];
         this.distanceBuffer = [];
         this.bufferSize = 2;  // Reduce buffer size (was 3)
+        this.isInitialized = false;
     }
 
     async init() {
+        if (this.isInitialized) return;
+        
         try {
             // Setup webcam and canvas
             this.webcam = document.getElementById('webcam');
@@ -401,11 +404,11 @@ class PostureDetector {
                 faceLandmarksDetection.SupportedPackages.mediapipeFacemesh
             );
 
-            // Request webcam access
+            // Request camera permission only when initializing
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 640 }, height: { ideal: 480 } }
+                video: true,
+                audio: false
             });
-            
             this.webcam.srcObject = stream;
             
             // Wait for video to be ready
@@ -423,7 +426,7 @@ class PostureDetector {
             
             console.log('All models loaded successfully');
 
-            // Start detection loop
+            this.isInitialized = true;
             this.isRunning = true;
             this.detectLoop();
 
@@ -435,7 +438,7 @@ class PostureDetector {
 
     async detectLoop(timestamp) {
         if (!this.isRunning) return;
-
+        
         try {
             if (this.webcam.readyState === this.webcam.HAVE_ENOUGH_DATA) {
                 this.ctx.drawImage(this.webcam, 0, 0);
@@ -463,28 +466,54 @@ class PostureDetector {
                     let width = Math.round(coords.maxX - coords.minX);
                     let height = Math.round(coords.maxY - coords.minY);
 
-                    // Ensure coordinates are valid
+                    // Ensure coordinates are valid (keep this for detection logic)
                     x = Math.max(0, Math.min(x, this.canvas.width - width));
                     y = Math.max(0, Math.min(y, this.canvas.height - height));
                     width = Math.min(width, this.canvas.width - x);
                     height = Math.min(height, this.canvas.height - y);
 
-                    // Draw face detection box
-                    this.ctx.strokeStyle = '#00ff00';
-                    this.ctx.lineWidth = 2;
-                    this.ctx.strokeRect(x, y, width, height);
+                    // Draw high-tech corners
+                    const side_length_x = 0.4 * width;
+                    const side_length_y = 0.4 * height;
+                    const longer_side = Math.max(width, height);
+                    const thickness = Math.max(4, 0.07 * longer_side);
 
-                    // Create a temporary canvas for the face region
+                    this.ctx.strokeStyle = '#63B3ED'; // Lighter blue color
+                    this.ctx.lineWidth = thickness;
+                    this.ctx.lineCap = 'round';
+
+                    // Draw top right corner
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x + width, y);
+                    this.ctx.lineTo(x + width - side_length_x, y);
+                    this.ctx.stroke();
+
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x + width, y);
+                    this.ctx.lineTo(x + width, y + side_length_y);
+                    this.ctx.stroke();
+
+                    // Draw bottom left corner
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, y + height);
+                    this.ctx.lineTo(x + side_length_x, y + height);
+                    this.ctx.stroke();
+
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, y + height);
+                    this.ctx.lineTo(x, y + height - side_length_y);
+                    this.ctx.stroke();
+
+                    // Create temporary canvas for face processing (keep all this logic)
                     const faceCanvas = document.createElement('canvas');
-                    faceCanvas.width = 160;  // Set to final size directly
+                    faceCanvas.width = 160;
                     faceCanvas.height = 160;
                     const faceCtx = faceCanvas.getContext('2d');
 
-                    // Draw the face region directly at the target size
                     faceCtx.drawImage(
                         this.webcam,
-                        x, y, width, height,  // Source coordinates
-                        0, 0, 160, 160        // Destination coordinates
+                        x, y, width, height,
+                        0, 0, 160, 160
                     );
 
                     // Process for emotion detection
@@ -529,7 +558,6 @@ class PostureDetector {
     updateUI(emotionConfidences, distance) {
         const now = performance.now();
         if (now - this.lastUIUpdate < this.uiUpdateInterval) {
-            // Buffer the readings
             this.emotionBuffer.push(emotionConfidences);
             this.distanceBuffer.push(distance);
             if (this.emotionBuffer.length > this.bufferSize) {
@@ -540,23 +568,53 @@ class PostureDetector {
         }
         this.lastUIUpdate = now;
 
-        // Update posture immediately
+        // Update posture with corrected distance interpretations
         const postureLabel = document.getElementById('posture-label');
         const confidenceBar = document.getElementById('posture-confidence');
         
         let postureStatus = '';
-        if (distance <= 7) {
+        let barColor = '';
+        
+        // Calculate color based on distance ranges with corrected messages
+        if (distance <= 3) {
             postureStatus = 'Too far from screen';
-        } else if (distance > 18) {
+            barColor = '#FF0000'; // Pure red
+        } else if (distance > 19) {
             postureStatus = 'Too close to screen';
-        } else {
+            barColor = '#FF0000'; // Pure red
+        } else if (distance > 5 && distance <= 14) {
             postureStatus = 'Good posture';
+            barColor = '#00FF00'; // Pure green
+        } else if (distance > 3 && distance <= 5) {
+            postureStatus = 'Too far from screen';
+            // Transition from red to yellow (3-5 range)
+            const ratio = (distance - 3) / 2;
+            const r = 255;
+            const g = Math.round(ratio * 255);
+            barColor = `rgb(${r}, ${g}, 0)`;
+        } else if (distance > 14 && distance <= 17) {
+            postureStatus = 'Lean back a bit';
+            // Transition from green to yellow (14-17 range)
+            const ratio = (distance - 14) / 3;
+            const r = Math.round(ratio * 255);
+            const g = 255;
+            barColor = `rgb(${r}, ${g}, 0)`;
+        } else if (distance > 17 && distance <= 19) {
+            postureStatus = 'Too close to screen';
+            // Transition from yellow to red (17-19 range)
+            const ratio = (distance - 17) / 2;
+            const r = 255;
+            const g = Math.round(255 * (1 - ratio));
+            barColor = `rgb(${r}, ${g}, 0)`;
         }
         
         if (postureLabel && confidenceBar) {
             postureLabel.textContent = postureStatus;
-            const scaledWidth = Math.min(100, (distance / 25) * 100);
+            postureLabel.style.color = barColor;
+            const scaledWidth = Math.min(100, (distance / 24) * 100);
             confidenceBar.style.width = `${scaledWidth}%`;
+            confidenceBar.style.background = barColor;
+            confidenceBar.style.transition = 'background-color 0.3s ease, width 0.3s ease';
         }
 
         // Update emotions list - show only top 3
@@ -626,12 +684,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Add PostureDetector initialization
-    try {
-        const detector = new PostureDetector();
-        await detector.init();
-    } catch (error) {
-        console.error('Failed to initialize posture detector:', error);
+    // Initialize detector but don't start it yet
+    const detector = new PostureDetector();
+    
+    // Add start demo button functionality
+    const startDemoBtn = document.getElementById('start-demo');
+    const demoContainer = document.querySelector('.demo-container');
+    
+    if (startDemoBtn && demoContainer) {
+        startDemoBtn.addEventListener('click', async () => {
+            try {
+                await detector.init();
+                demoContainer.classList.add('active');
+                startDemoBtn.style.display = 'none';
+            } catch (error) {
+                console.error('Failed to start demo:', error);
+                alert('Failed to start demo. Please ensure camera access is allowed.');
+            }
+        });
     }
 
     // Handle navigation clicks
@@ -668,6 +738,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => {
         document.body.classList.add('loaded');
     }, 500);
+
+    // Hamburger menu functionality
+    const hamburger = document.querySelector('.hamburger');
+    const navLinks = document.querySelector('.nav-links');
+    
+    hamburger.addEventListener('click', () => {
+        hamburger.classList.toggle('active');
+        navLinks.classList.toggle('active');
+    });
+
+    // Close menu when clicking a link
+    document.querySelectorAll('.nav-links a').forEach(link => {
+        link.addEventListener('click', () => {
+            hamburger.classList.remove('active');
+            navLinks.classList.remove('active');
+        });
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!hamburger.contains(e.target) && !navLinks.contains(e.target)) {
+            hamburger.classList.remove('active');
+            navLinks.classList.remove('active');
+        }
+    });
 });
 
 // Handle window resize

@@ -19,6 +19,11 @@
     <!-- Navigation -->
     <nav>
         <div class="logo">LetsLockIn</div>
+        <div class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
         <div class="nav-links">
             <a href="#home">Home</a>
             <a href="#features">Features</a>
@@ -52,15 +57,15 @@
     <section id="features" class="features">
         <h2 class="section-title animate-on-scroll">Our Features</h2>
         <div class="features-grid">
+            <div class="feature-card featured animate-on-scroll">
+                <i class="fas fa-brain"></i>
+                <h3>Focus Reinforcement</h3>
+                <p>Active posture guidance for maintained concentration</p>
+            </div>
             <div class="feature-card animate-on-scroll">
                 <i class="fas fa-camera"></i>
                 <h3>Real-Time Monitoring</h3>
                 <p>Smart webcam monitoring for posture and engagement tracking</p>
-            </div>
-            <div class="feature-card animate-on-scroll">
-                <i class="fas fa-brain"></i>
-                <h3>Focus Reinforcement</h3>
-                <p>Active posture guidance for maintained concentration</p>
             </div>
             <div class="feature-card animate-on-scroll">
                 <i class="fas fa-heart"></i>
@@ -78,19 +83,26 @@
     <!-- Demo Section -->
     <section id="demo" class="demo">
         <h2 class="section-title animate-on-scroll">See It In Action</h2>
+        <div class="demo-start-container">
+            <button id="start-demo" class="cta-btn">
+                <i class="fas fa-play"></i>
+                Start the Demo
+            </button>
+        </div>
         <div class="demo-container">
             <div class="demo-video animate-on-scroll">
                 <video id="webcam" autoplay playsinline muted></video>
                 <canvas id="output-canvas"></canvas>
             </div>
             <div class="stats-panel animate-on-scroll">
-                <h3>Real-Time Analysis</h3>
+                <h3 class="real-time-title">Real-time Analysis</h3>
                 <div class="stat-item">
-                    <span>Current Posture: <span id="posture-label">-</span></span>
+                    <span id="posture-label">-</span>
                     <div class="progress-bar">
                         <div id="posture-confidence" class="progress" style="width: 0%"></div>
                     </div>
                 </div>
+                <h3 class="emotions-title">Predicted Emotions:</h3>
                 <div id="prediction-history">
                     <h4>Recent Detections</h4>
                     <ul id="detection-list"></ul>
