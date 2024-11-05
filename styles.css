@@ -1315,3 +1315,39 @@ body.loaded .loading-overlay {
         transform: translateY(-9px) rotate(-45deg);
     }
 }
+
+/* Add these styles */
+.demo-controls {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.stop-btn {
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    background: linear-gradient(45deg, #ff416c, #ff4b2b);
+    color: white;
+    box-shadow: 0 4px 15px rgba(255, 65, 108, 0.3);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stop-btn:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 6px 20px rgba(255, 65, 108, 0.4);
+    background: linear-gradient(45deg, #ff4b2b, #ff416c);
+}
+
+.stop-btn:active {
+    transform: translateY(1px);
+}
+
+.stop-btn i {
+    font-size: 0.9em;
+}

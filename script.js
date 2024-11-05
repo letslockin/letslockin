@@ -649,11 +649,14 @@ class PostureDetector {
         this.distanceBuffer = [];
     }
 
-    stop() {
+    async stop() {
         this.isRunning = false;
         if (this.webcam && this.webcam.srcObject) {
-            this.webcam.srcObject.getTracks().forEach(track => track.stop());
+            const tracks = this.webcam.srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+            this.webcam.srcObject = null;
         }
+        this.isInitialized = false;
     }
 
     calculateFaceDistance(faceWidth, faceHeight, frameWidth, frameHeight) {
@@ -687,20 +690,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize detector but don't start it yet
     const detector = new PostureDetector();
     
-    // Add start demo button functionality
+    // Add start and stop demo button functionality
     const startDemoBtn = document.getElementById('start-demo');
+    const stopDemoBtn = document.getElementById('stop-demo');
     const demoContainer = document.querySelector('.demo-container');
     
-    if (startDemoBtn && demoContainer) {
+    if (startDemoBtn && stopDemoBtn && demoContainer) {
         startDemoBtn.addEventListener('click', async () => {
             try {
                 await detector.init();
                 demoContainer.classList.add('active');
                 startDemoBtn.style.display = 'none';
+                stopDemoBtn.style.display = 'inline-flex';
             } catch (error) {
                 console.error('Failed to start demo:', error);
                 alert('Failed to start demo. Please ensure camera access is allowed.');
             }
+        });
+
+        stopDemoBtn.addEventListener('click', async () => {
+            await detector.stop();
+            demoContainer.classList.remove('active');
+            startDemoBtn.style.display = 'inline-flex';
+            stopDemoBtn.style.display = 'none';
+            
+            // Reset the UI elements
+            const postureLabel = document.getElementById('posture-label');
+            const confidenceBar = document.getElementById('posture-confidence');
+            const detectionList = document.getElementById('detection-list');
+            
+            if (postureLabel) postureLabel.textContent = '-';
+            if (confidenceBar) confidenceBar.style.width = '0%';
+            if (detectionList) detectionList.innerHTML = '';
         });
     }
 
