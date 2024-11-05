@@ -381,6 +381,26 @@ class PostureDetector {
         this.distanceBuffer = [];
         this.bufferSize = 2;  // Reduce buffer size (was 3)
         this.isInitialized = false;
+        this.alertSound = document.getElementById('distance-alert');
+        this.normalSound = document.getElementById('distance-normal');
+        this.isAlertPlaying = false;
+        this.lastAlertTime = 0;
+        this.alertCooldown = 3000; // 3 seconds between alerts
+
+        // Add this to ensure sounds are loaded
+        if (this.alertSound) {
+            this.alertSound.load();
+            console.log('Alert sound loaded');
+        } else {
+            console.warn('Alert sound element not found');
+        }
+        
+        if (this.normalSound) {
+            this.normalSound.load();
+            console.log('Normal sound loaded');
+        } else {
+            console.warn('Normal sound element not found');
+        }
     }
 
     async init() {
@@ -579,12 +599,15 @@ class PostureDetector {
         if (distance <= 3) {
             postureStatus = 'Too far from screen';
             barColor = '#FF0000'; // Pure red
+            this.playDistanceAlert(false).catch(console.error);
         } else if (distance > 19) {
             postureStatus = 'Too close to screen';
             barColor = '#FF0000'; // Pure red
+            this.playDistanceAlert(true).catch(console.error);
         } else if (distance > 5 && distance <= 14) {
             postureStatus = 'Good posture';
             barColor = '#00FF00'; // Pure green
+            this.playNormalDistance().catch(console.error);
         } else if (distance > 3 && distance <= 5) {
             postureStatus = 'Too far from screen';
             // Transition from red to yellow (3-5 range)
@@ -592,6 +615,7 @@ class PostureDetector {
             const r = 255;
             const g = Math.round(ratio * 255);
             barColor = `rgb(${r}, ${g}, 0)`;
+            this.playDistanceAlert(false).catch(console.error);
         } else if (distance > 14 && distance <= 17) {
             postureStatus = 'Lean back a bit';
             // Transition from green to yellow (14-17 range)
@@ -606,6 +630,7 @@ class PostureDetector {
             const r = 255;
             const g = Math.round(255 * (1 - ratio));
             barColor = `rgb(${r}, ${g}, 0)`;
+            this.playDistanceAlert(true).catch(console.error);
         }
         
         if (postureLabel && confidenceBar) {
@@ -657,12 +682,116 @@ class PostureDetector {
             this.webcam.srcObject = null;
         }
         this.isInitialized = false;
+        this.isAlertPlaying = false;
+        this.lastAlertTime = 0;
+        if (this.alertSound) this.alertSound.pause();
+        if (this.normalSound) this.normalSound.pause();
+
+        // Reset audio state
+        this.isAlertPlaying = false;
+        this.lastAlertTime = 0;
+        
+        try {
+            if (this.alertSound) {
+                this.alertSound.pause();
+                this.alertSound.currentTime = 0;
+            }
+            if (this.normalSound) {
+                this.normalSound.pause();
+                this.normalSound.currentTime = 0;
+            }
+        } catch (error) {
+            console.error('Error stopping sounds:', error);
+        }
     }
 
     calculateFaceDistance(faceWidth, faceHeight, frameWidth, frameHeight) {
         const cameraSize = frameWidth * frameHeight;
         const faceArea = faceWidth * faceHeight;
         return (faceArea * 100) / cameraSize;
+    }
+
+    async playDistanceAlert(isTooClose) {
+        const currentTime = Date.now();
+        if (currentTime - this.lastAlertTime < this.alertCooldown) {
+            return;
+        }
+
+        if (!this.isAlertPlaying && this.alertSound) {
+            this.isAlertPlaying = true;
+            this.lastAlertTime = currentTime;
+            
+            try {
+                // Reset the sound to beginning
+                this.alertSound.currentTime = 0;
+                
+                // Create a user interaction promise
+                const playPromise = this.alertSound.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            console.log('Alert sound playing successfully');
+                        })
+                        .catch(error => {
+                            console.error('Error playing alert sound:', error);
+                            // Reset the alert state if playback fails
+                            this.isAlertPlaying = false;
+                        });
+                }
+
+                const message = isTooClose ? 
+                    "You're too close to the screen!" : 
+                    "You're too far from the screen!";
+                console.log(message);
+                
+            } catch (error) {
+                console.error('Error in playDistanceAlert:', error);
+                this.isAlertPlaying = false;
+            }
+        }
+    }
+
+    async playNormalDistance() {
+        if (this.isAlertPlaying && this.normalSound) {
+            this.isAlertPlaying = false;
+            
+            try {
+                this.normalSound.currentTime = 0;
+                
+                const playPromise = this.normalSound.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            console.log('Normal sound playing successfully');
+                        })
+                        .catch(error => {
+                            console.error('Error playing normal sound:', error);
+                        });
+                }
+                
+                console.log("Distance is now normal");
+                
+            } catch (error) {
+                console.error('Error in playNormalDistance:', error);
+            }
+        }
+    }
+
+    updatePostureInfo(distance) {
+        // ... existing distance calculation code ...
+
+        // Add this after the distance calculation
+        if (distance < 40) {
+            this.playDistanceAlert(true).catch(console.error); // Too close
+        } else if (distance > 80) {
+            this.playDistanceAlert(false).catch(console.error); // Too far
+        } else {
+            this.playNormalDistance().catch(console.error); // Normal distance
+        }
+
+        // ... rest of the existing code ...
     }
 }
 
