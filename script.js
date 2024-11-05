@@ -385,7 +385,7 @@ class PostureDetector {
         this.normalSound = document.getElementById('distance-normal');
         this.isAlertPlaying = false;
         this.lastAlertTime = 0;
-        this.alertCooldown = 3000; // 3 seconds between alerts
+        this.alertCooldown = 1000; // 1 seconds between alerts
 
         // Add this to ensure sounds are loaded
         if (this.alertSound) {
@@ -400,6 +400,62 @@ class PostureDetector {
             console.log('Normal sound loaded');
         } else {
             console.warn('Normal sound element not found');
+        }
+
+        // Add stress detection properties
+        this.stressedVal = 0;
+        this.stepsPrintVal = 0;
+        this.stressStatus = 0;
+        this.stressStartTime = 0;
+        this.stressSound = document.getElementById('stress-alert');
+        this.stressAlertDuration = 4000; // 4 seconds in milliseconds
+        
+        // Load stress sound
+        if (this.stressSound) {
+            this.stressSound.load();
+            console.log('Stress alert sound loaded');
+        }
+
+        // Update cooldown times
+        this.distanceAlertCooldown = 300; // 0.3 seconds for distance alerts
+        this.lastDistanceAlertTime = 0;
+        
+        // Separate stress alert properties
+        this.stressAlertDuration = 4000; // 4 seconds for stress alert
+        this.stressStartTime = 0;
+        this.stressStatus = 0;
+
+        // Add state tracking for posture
+        this.isInGoodPosture = false;
+    }
+
+    // Add this method to reset values
+    resetStressValues() {
+        this.stressedVal = 0;
+        this.stepsPrintVal = 0;
+        this.stressStatus = 0;
+        this.stressStartTime = 0;
+    }
+
+    // Add this method to play stress alert
+    async playStressAlert() {
+        try {
+            if (this.stressSound) {
+                this.stressSound.currentTime = 0;
+                const playPromise = this.stressSound.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            console.log('Stress alert sound playing successfully');
+                        })
+                        .catch(error => {
+                            console.error('Error playing stress alert:', error);
+                        });
+                }
+            }
+        } catch (error) {
+            console.error('Error in playStressAlert:', error);
         }
     }
 
@@ -588,51 +644,68 @@ class PostureDetector {
         }
         this.lastUIUpdate = now;
 
-        // Update posture with corrected distance interpretations
+        // Get UI elements
         const postureLabel = document.getElementById('posture-label');
         const confidenceBar = document.getElementById('posture-confidence');
+        const detectionList = document.getElementById('detection-list');
         
         let postureStatus = '';
         let barColor = '';
         
-        // Calculate color based on distance ranges with corrected messages
+        // Determine current posture state
+        let currentPostureState;
         if (distance <= 3) {
+            currentPostureState = 'too_far';
             postureStatus = 'Too far from screen';
-            barColor = '#FF0000'; // Pure red
+            barColor = '#FF0000';
             this.playDistanceAlert(false).catch(console.error);
-        } else if (distance > 19) {
-            postureStatus = 'Too close to screen';
-            barColor = '#FF0000'; // Pure red
-            this.playDistanceAlert(true).catch(console.error);
+            this.isInGoodPosture = false;
         } else if (distance > 5 && distance <= 14) {
+            currentPostureState = 'good';
             postureStatus = 'Good posture';
-            barColor = '#00FF00'; // Pure green
-            this.playNormalDistance().catch(console.error);
+            barColor = '#00FF00';
+            // Play normal sound only when transitioning TO good posture
+            if (this.lastPostureState !== 'good' && !this.isInGoodPosture) {
+                this.playNormalDistance().catch(console.error);
+                this.isInGoodPosture = true;
+            }
+        } else if (distance > 19) {
+            currentPostureState = 'too_close';
+            postureStatus = 'Too close to screen';
+            barColor = '#FF0000';
+            this.playDistanceAlert(true).catch(console.error);
+            this.isInGoodPosture = false;
         } else if (distance > 3 && distance <= 5) {
+            currentPostureState = 'other';
             postureStatus = 'Too far from screen';
-            // Transition from red to yellow (3-5 range)
             const ratio = (distance - 3) / 2;
             const r = 255;
             const g = Math.round(ratio * 255);
             barColor = `rgb(${r}, ${g}, 0)`;
+            this.isInGoodPosture = false;
             this.playDistanceAlert(false).catch(console.error);
         } else if (distance > 14 && distance <= 17) {
+            currentPostureState = 'other';
             postureStatus = 'Lean back a bit';
-            // Transition from green to yellow (14-17 range)
             const ratio = (distance - 14) / 3;
             const r = Math.round(ratio * 255);
             const g = 255;
             barColor = `rgb(${r}, ${g}, 0)`;
+            this.isInGoodPosture = false;
         } else if (distance > 17 && distance <= 19) {
+            currentPostureState = 'other';
             postureStatus = 'Too close to screen';
-            // Transition from yellow to red (17-19 range)
             const ratio = (distance - 17) / 2;
             const r = 255;
             const g = Math.round(255 * (1 - ratio));
             barColor = `rgb(${r}, ${g}, 0)`;
-            this.playDistanceAlert(true).catch(console.error);
+            this.isInGoodPosture = false;
         }
-        
+
+        // Update last posture state
+        this.lastPostureState = currentPostureState;
+
+        // Update UI elements
         if (postureLabel && confidenceBar) {
             postureLabel.textContent = postureStatus;
             postureLabel.style.color = barColor;
@@ -642,16 +715,58 @@ class PostureDetector {
             confidenceBar.style.transition = 'background-color 0.3s ease, width 0.3s ease';
         }
 
-        // Update emotions list - show only top 3
-        const detectionList = document.getElementById('detection-list');
-        if (detectionList) {
-            const sortedEmotions = emotionConfidences
-                .sort((a, b) => b.confidence - a.confidence)
-                .slice(0, 3); // Only show top 3 emotions
+        // Process emotions and stress
+        const sortedEmotions = emotionConfidences.sort((a, b) => b.confidence - a.confidence);
+        const mostConfidentEmotion = sortedEmotions[0].emotion;
+        
+        if (['Happy', 'Neutral', 'Surprise'].includes(mostConfidentEmotion)) {
+            this.stressedVal++;
+            this.stepsPrintVal++;
+        } else {
+            this.stressedVal--;
+            this.stepsPrintVal++;
+        }
 
-            const fragment = document.createDocumentFragment();
+        const emotionVal = this.stressedVal / this.stepsPrintVal;
+
+        // Check for stress conditions
+        if (this.stepsPrintVal === 35 && emotionVal <= 0) {
+            if (this.stressStatus === 0) {
+                this.stressStatus = 1;
+                this.stressStartTime = Date.now();
+                console.log('You are stressed!!!');
+                console.log('Please relax a little bit!');
+                this.playStressAlert().catch(console.error);
+            }
+        }
+
+        if (this.stepsPrintVal > 35 && emotionVal > 0) {
+            this.resetStressValues();
+        }
+
+        // Update detection list
+        if (detectionList) {
+            detectionList.innerHTML = '';
             
-            sortedEmotions.forEach(({emotion, confidence}) => {
+            // Calculate inverted emotion value (100% -> 0%, -100% -> 100%)
+            const invertedEmotionVal = 1 - emotionVal; // This inverts the scale
+            const displayPercentage = (invertedEmotionVal * 100).toFixed(1);
+            
+            // Add overwork state indicator
+            const overworkItem = document.createElement('li');
+            overworkItem.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Overwork State</span>
+                    <div class="emotion-bar-container">
+                        <div class="emotion-bar" style="width: ${invertedEmotionVal * 100}%;"></div>
+                    </div>
+                    <span>${displayPercentage}%</span>
+                </div>
+            `;
+            detectionList.appendChild(overworkItem);
+
+            // Add top 3 emotions
+            sortedEmotions.slice(0, 3).forEach(({emotion, confidence}) => {
                 const listItem = document.createElement('li');
                 listItem.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -662,16 +777,16 @@ class PostureDetector {
                         <span>${(confidence * 100).toFixed(1)}%</span>
                     </div>
                 `;
-                fragment.appendChild(listItem);
+                detectionList.appendChild(listItem);
             });
-
-            detectionList.innerHTML = '';
-            detectionList.appendChild(fragment);
         }
+    }
 
-        // Clear buffers
-        this.emotionBuffer = [];
-        this.distanceBuffer = [];
+    resetStressValues() {
+        this.stressedVal = 0;
+        this.stepsPrintVal = 0;
+        this.stressStatus = 0;
+        this.stressStartTime = 0;
     }
 
     async stop() {
@@ -681,28 +796,27 @@ class PostureDetector {
             tracks.forEach(track => track.stop());
             this.webcam.srcObject = null;
         }
-        this.isInitialized = false;
-        this.isAlertPlaying = false;
-        this.lastAlertTime = 0;
-        if (this.alertSound) this.alertSound.pause();
-        if (this.normalSound) this.normalSound.pause();
-
-        // Reset audio state
-        this.isAlertPlaying = false;
-        this.lastAlertTime = 0;
         
-        try {
-            if (this.alertSound) {
-                this.alertSound.pause();
-                this.alertSound.currentTime = 0;
-            }
-            if (this.normalSound) {
-                this.normalSound.pause();
-                this.normalSound.currentTime = 0;
-            }
-        } catch (error) {
-            console.error('Error stopping sounds:', error);
+        // Reset all states
+        this.isInGoodPosture = false;
+        this.lastPostureState = null;
+        this.resetStressValues();
+        
+        // Stop all sounds
+        if (this.alertSound) {
+            this.alertSound.pause();
+            this.alertSound.currentTime = 0;
         }
+        if (this.normalSound) {
+            this.normalSound.pause();
+            this.normalSound.currentTime = 0;
+        }
+        if (this.stressSound) {
+            this.stressSound.pause();
+            this.stressSound.currentTime = 0;
+        }
+        
+        this.isInitialized = false;
     }
 
     calculateFaceDistance(faceWidth, faceHeight, frameWidth, frameHeight) {
@@ -713,68 +827,30 @@ class PostureDetector {
 
     async playDistanceAlert(isTooClose) {
         const currentTime = Date.now();
-        if (currentTime - this.lastAlertTime < this.alertCooldown) {
+        if (currentTime - this.lastDistanceAlertTime < this.distanceAlertCooldown) {
             return;
         }
 
-        if (!this.isAlertPlaying && this.alertSound) {
-            this.isAlertPlaying = true;
-            this.lastAlertTime = currentTime;
-            
-            try {
-                // Reset the sound to beginning
+        try {
+            if (this.alertSound) {
+                this.lastDistanceAlertTime = currentTime;
                 this.alertSound.currentTime = 0;
-                
-                // Create a user interaction promise
-                const playPromise = this.alertSound.play();
-                
-                if (playPromise !== undefined) {
-                    playPromise
-                        .then(() => {
-                            console.log('Alert sound playing successfully');
-                        })
-                        .catch(error => {
-                            console.error('Error playing alert sound:', error);
-                            // Reset the alert state if playback fails
-                            this.isAlertPlaying = false;
-                        });
-                }
-
-                const message = isTooClose ? 
-                    "You're too close to the screen!" : 
-                    "You're too far from the screen!";
-                console.log(message);
-                
-            } catch (error) {
-                console.error('Error in playDistanceAlert:', error);
-                this.isAlertPlaying = false;
+                await this.alertSound.play();
+                console.log('Distance alert sound playing successfully');
             }
+        } catch (error) {
+            console.error('Error playing distance alert:', error);
         }
     }
 
     async playNormalDistance() {
-        if (this.isAlertPlaying && this.normalSound) {
-            this.isAlertPlaying = false;
-            
+        if (this.normalSound) {
             try {
                 this.normalSound.currentTime = 0;
-                
-                const playPromise = this.normalSound.play();
-                
-                if (playPromise !== undefined) {
-                    playPromise
-                        .then(() => {
-                            console.log('Normal sound playing successfully');
-                        })
-                        .catch(error => {
-                            console.error('Error playing normal sound:', error);
-                        });
-                }
-                
-                console.log("Distance is now normal");
-                
+                await this.normalSound.play();
+                console.log('Normal sound playing successfully');
             } catch (error) {
-                console.error('Error in playNormalDistance:', error);
+                console.error('Error playing normal sound:', error);
             }
         }
     }
@@ -797,122 +873,130 @@ class PostureDetector {
 
 // Initialize everything when the page loads
 document.addEventListener('DOMContentLoaded', async () => {
-    // Existing initializations
-    new ParticleSystem();
-    animateMainTitle();
-    initScrollAnimations();
-    initProgressBars();
-    initFeedback();
-    initLogin();
+    try {
+        // Initialize GSAP plugins first
+        gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
-    // Add Get Started button functionality
-    const getStartedBtn = document.querySelector('.hero-content .cta-btn');
-    if (getStartedBtn) {
-        getStartedBtn.addEventListener('click', () => {
-            const featuresSection = document.querySelector('#features');
-            if (featuresSection) {
-                smoothScroll(featuresSection);
-            }
-        });
-    }
+        // Initialize basic UI components
+        new ParticleSystem();
+        animateMainTitle();
+        initScrollAnimations();
+        initProgressBars();
+        initFeedback();
+        initLogin();
 
-    // Initialize detector but don't start it yet
-    const detector = new PostureDetector();
-    
-    // Add start and stop demo button functionality
-    const startDemoBtn = document.getElementById('start-demo');
-    const stopDemoBtn = document.getElementById('stop-demo');
-    const demoContainer = document.querySelector('.demo-container');
-    
-    if (startDemoBtn && stopDemoBtn && demoContainer) {
-        startDemoBtn.addEventListener('click', async () => {
-            try {
-                await detector.init();
-                demoContainer.classList.add('active');
-                startDemoBtn.style.display = 'none';
-                stopDemoBtn.style.display = 'inline-flex';
-            } catch (error) {
-                console.error('Failed to start demo:', error);
-                alert('Failed to start demo. Please ensure camera access is allowed.');
-            }
-        });
-
-        stopDemoBtn.addEventListener('click', async () => {
-            await detector.stop();
-            demoContainer.classList.remove('active');
-            startDemoBtn.style.display = 'inline-flex';
-            stopDemoBtn.style.display = 'none';
-            
-            // Reset the UI elements
-            const postureLabel = document.getElementById('posture-label');
-            const confidenceBar = document.getElementById('posture-confidence');
-            const detectionList = document.getElementById('detection-list');
-            
-            if (postureLabel) postureLabel.textContent = '-';
-            if (confidenceBar) confidenceBar.style.width = '0%';
-            if (detectionList) detectionList.innerHTML = '';
-        });
-    }
-
-    // Handle navigation clicks
-    document.querySelectorAll('nav a').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const targetId = link.getAttribute('href');
-            let target;
-
-            switch(targetId) {
-                case '#home':
-                    target = document.querySelector('.hero');
-                    break;
-                case '#features':
-                    target = document.querySelector('#features');
-                    break;
-                case '#demo':
-                    target = document.querySelector('#demo');
-                    break;
-                case '#contact':
-                    target = document.querySelector('#contact');
-                    break;
-                default:
-                    target = document.querySelector(targetId);
-            }
-
-            if (target) {
-                smoothScroll(target);
-            }
-        });
-    });
-
-    // Remove loading overlay
-    setTimeout(() => {
-        document.body.classList.add('loaded');
-    }, 500);
-
-    // Hamburger menu functionality
-    const hamburger = document.querySelector('.hamburger');
-    const navLinks = document.querySelector('.nav-links');
-    
-    hamburger.addEventListener('click', () => {
-        hamburger.classList.toggle('active');
-        navLinks.classList.toggle('active');
-    });
-
-    // Close menu when clicking a link
-    document.querySelectorAll('.nav-links a').forEach(link => {
-        link.addEventListener('click', () => {
-            hamburger.classList.remove('active');
-            navLinks.classList.remove('active');
-        });
-    });
-
-    // Close menu when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!hamburger.contains(e.target) && !navLinks.contains(e.target)) {
-            hamburger.classList.remove('active');
-            navLinks.classList.remove('active');
+        // Add Get Started button functionality
+        const getStartedBtn = document.querySelector('.hero-content .cta-btn');
+        if (getStartedBtn) {
+            getStartedBtn.addEventListener('click', () => {
+                const featuresSection = document.querySelector('#features');
+                if (featuresSection) {
+                    smoothScroll(featuresSection);
+                }
+            });
         }
-    });
+
+        // Initialize detector but don't start it yet
+        const detector = new PostureDetector();
+        
+        // Add start and stop demo button functionality
+        const startDemoBtn = document.getElementById('start-demo');
+        const stopDemoBtn = document.getElementById('stop-demo');
+        const demoContainer = document.querySelector('.demo-container');
+        
+        if (startDemoBtn && stopDemoBtn && demoContainer) {
+            startDemoBtn.addEventListener('click', async () => {
+                try {
+                    await detector.init();
+                    demoContainer.classList.add('active');
+                    startDemoBtn.style.display = 'none';
+                    stopDemoBtn.style.display = 'inline-flex';
+                } catch (error) {
+                    console.error('Failed to start demo:', error);
+                    alert('Failed to start demo. Please ensure camera access is allowed.');
+                }
+            });
+
+            stopDemoBtn.addEventListener('click', async () => {
+                await detector.stop();
+                demoContainer.classList.remove('active');
+                startDemoBtn.style.display = 'inline-flex';
+                stopDemoBtn.style.display = 'none';
+                
+                // Reset the UI elements
+                const postureLabel = document.getElementById('posture-label');
+                const confidenceBar = document.getElementById('posture-confidence');
+                const detectionList = document.getElementById('detection-list');
+                
+                if (postureLabel) postureLabel.textContent = '-';
+                if (confidenceBar) confidenceBar.style.width = '0%';
+                if (detectionList) detectionList.innerHTML = '';
+            });
+        }
+
+        // Handle navigation clicks
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.getAttribute('href');
+                let target;
+
+                switch(targetId) {
+                    case '#home':
+                        target = document.querySelector('.hero');
+                        break;
+                    case '#features':
+                        target = document.querySelector('#features');
+                        break;
+                    case '#demo':
+                        target = document.querySelector('#demo');
+                        break;
+                    case '#contact':
+                        target = document.querySelector('#contact');
+                        break;
+                    default:
+                        target = document.querySelector(targetId);
+                }
+
+                if (target) {
+                    smoothScroll(target);
+                }
+            });
+        });
+
+        // Remove loading overlay
+        setTimeout(() => {
+            document.body.classList.add('loaded');
+        }, 500);
+
+        // Hamburger menu functionality
+        const hamburger = document.querySelector('.hamburger');
+        const navLinks = document.querySelector('.nav-links');
+        
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('active');
+            navLinks.classList.toggle('active');
+        });
+
+        // Close menu when clicking a link
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                hamburger.classList.remove('active');
+                navLinks.classList.remove('active');
+            });
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!hamburger.contains(e.target) && !navLinks.contains(e.target)) {
+                hamburger.classList.remove('active');
+                navLinks.classList.remove('active');
+            }
+        });
+    } catch (error) {
+        console.error('Error initializing the page:', error);
+        alert('Failed to initialize the page. Please try again.');
+    }
 });
 
 // Handle window resize
