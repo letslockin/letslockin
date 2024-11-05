@@ -427,6 +427,8 @@ class PostureDetector {
 
         // Add state tracking for posture
         this.isInGoodPosture = false;
+        this.lastPostureState = null;
+        this.isPlayingAlert = false;
     }
 
     // Add this method to reset values
@@ -664,8 +666,7 @@ class PostureDetector {
             currentPostureState = 'good';
             postureStatus = 'Good posture';
             barColor = '#00FF00';
-            // Play normal sound only when transitioning TO good posture
-            if (this.lastPostureState !== 'good' && !this.isInGoodPosture) {
+            if (this.lastPostureState !== 'good') {
                 this.playNormalDistance().catch(console.error);
                 this.isInGoodPosture = true;
             }
@@ -804,6 +805,7 @@ class PostureDetector {
         
         // Stop all sounds
         if (this.alertSound) {
+            this.alertSound.onended = null; // Remove event listener
             this.alertSound.pause();
             this.alertSound.currentTime = 0;
         }
@@ -817,6 +819,7 @@ class PostureDetector {
         }
         
         this.isInitialized = false;
+        this.isPlayingAlert = false;
     }
 
     calculateFaceDistance(faceWidth, faceHeight, frameWidth, frameHeight) {
@@ -827,24 +830,32 @@ class PostureDetector {
 
     async playDistanceAlert(isTooClose) {
         const currentTime = Date.now();
-        if (currentTime - this.lastDistanceAlertTime < this.distanceAlertCooldown) {
+        if (currentTime - this.lastDistanceAlertTime < this.distanceAlertCooldown || this.isPlayingAlert) {
             return;
         }
 
         try {
             if (this.alertSound) {
+                this.isPlayingAlert = true;
                 this.lastDistanceAlertTime = currentTime;
                 this.alertSound.currentTime = 0;
+                
                 await this.alertSound.play();
+                
+                this.alertSound.onended = () => {
+                    this.isPlayingAlert = false;
+                };
+                
                 console.log('Distance alert sound playing successfully');
             }
         } catch (error) {
             console.error('Error playing distance alert:', error);
+            this.isPlayingAlert = false;
         }
     }
 
     async playNormalDistance() {
-        if (this.normalSound) {
+        if (!this.isInGoodPosture && this.normalSound) {
             try {
                 this.normalSound.currentTime = 0;
                 await this.normalSound.play();
