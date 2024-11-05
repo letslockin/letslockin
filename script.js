@@ -429,6 +429,12 @@ class PostureDetector {
         this.isInGoodPosture = false;
         this.lastPostureState = null;
         this.isPlayingAlert = false;
+
+        // Initialize audio context for Safari compatibility
+        this.audioContext = null;
+        this.alertBuffer = null;
+        this.normalBuffer = null;
+        this.isAudioInitialized = false;
     }
 
     // Add this method to reset values
@@ -458,6 +464,44 @@ class PostureDetector {
             }
         } catch (error) {
             console.error('Error in playStressAlert:', error);
+        }
+    }
+
+    async initAudio() {
+        if (this.isAudioInitialized) return;
+
+        try {
+            // Create audio context with Safari compatibility
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            this.audioContext = new AudioContext();
+
+            // Load audio files
+            const alertResponse = await fetch('assets/sounds/alert.mp3');
+            const normalResponse = await fetch('assets/sounds/normal.mp3');
+            
+            const alertArrayBuffer = await alertResponse.arrayBuffer();
+            const normalArrayBuffer = await normalResponse.arrayBuffer();
+            
+            this.alertBuffer = await this.audioContext.decodeAudioData(alertArrayBuffer);
+            this.normalBuffer = await this.audioContext.decodeAudioData(normalArrayBuffer);
+            
+            this.isAudioInitialized = true;
+        } catch (error) {
+            console.error('Error initializing audio:', error);
+        }
+    }
+
+    async playSound(buffer) {
+        if (!this.audioContext || !buffer) return;
+        
+        try {
+            const source = this.audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(this.audioContext.destination);
+            source.start(0);
+            return source;
+        } catch (error) {
+            console.error('Error playing sound:', error);
         }
     }
 
@@ -507,6 +551,8 @@ class PostureDetector {
             this.isInitialized = true;
             this.isRunning = true;
             this.detectLoop();
+
+            await this.initAudio(); // Initialize audio when starting detector
 
         } catch (error) {
             console.error('Error initializing posture detector:', error);
@@ -820,6 +866,12 @@ class PostureDetector {
         
         this.isInitialized = false;
         this.isPlayingAlert = false;
+
+        if (this.audioContext) {
+            await this.audioContext.close();
+            this.audioContext = null;
+            this.isAudioInitialized = false;
+        }
     }
 
     calculateFaceDistance(faceWidth, faceHeight, frameWidth, frameHeight) {
@@ -830,35 +882,31 @@ class PostureDetector {
 
     async playDistanceAlert(isTooClose) {
         const currentTime = Date.now();
-        if (currentTime - this.lastDistanceAlertTime < this.distanceAlertCooldown || this.isPlayingAlert) {
+        if (currentTime - this.lastDistanceAlertTime < this.distanceAlertCooldown) {
             return;
         }
 
         try {
-            if (this.alertSound) {
-                this.isPlayingAlert = true;
-                this.lastDistanceAlertTime = currentTime;
-                this.alertSound.currentTime = 0;
-                
-                await this.alertSound.play();
-                
-                this.alertSound.onended = () => {
-                    this.isPlayingAlert = false;
-                };
-                
-                console.log('Distance alert sound playing successfully');
+            if (!this.isAudioInitialized) {
+                await this.initAudio();
             }
+            
+            this.lastDistanceAlertTime = currentTime;
+            await this.playSound(this.alertBuffer);
+            console.log('Distance alert sound playing successfully');
         } catch (error) {
             console.error('Error playing distance alert:', error);
-            this.isPlayingAlert = false;
         }
     }
 
     async playNormalDistance() {
-        if (!this.isInGoodPosture && this.normalSound) {
+        if (!this.isInGoodPosture) {
             try {
-                this.normalSound.currentTime = 0;
-                await this.normalSound.play();
+                if (!this.isAudioInitialized) {
+                    await this.initAudio();
+                }
+                
+                await this.playSound(this.normalBuffer);
                 console.log('Normal sound playing successfully');
             } catch (error) {
                 console.error('Error playing normal sound:', error);
