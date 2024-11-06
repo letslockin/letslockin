@@ -435,6 +435,10 @@ class PostureDetector {
         this.alertBuffer = null;
         this.normalBuffer = null;
         this.isAudioInitialized = false;
+
+        // Simplified overwork detection properties
+        this.overworkThreshold = 0.3; // 30% threshold for overwork
+        this.minFramesForOverwork = 35; // Minimum frames needed before checking
     }
 
     // Add this method to reset values
@@ -776,19 +780,19 @@ class PostureDetector {
 
         const emotionVal = this.stressedVal / this.stepsPrintVal;
 
-        // Check for stress conditions
-        if (this.stepsPrintVal === 35 && emotionVal <= 0) {
-            if (this.stressStatus === 0) {
-                this.stressStatus = 1;
-                this.stressStartTime = Date.now();
-                console.log('You are stressed!!!');
-                console.log('Please relax a little bit!');
+        // Simplified overwork detection logic with auto-reset
+        if (this.stepsPrintVal >= this.minFramesForOverwork) {
+            if (emotionVal <= this.overworkThreshold) {
+                console.log('Overwork detected!');
+                console.log('Please take a break!');
                 this.playStressAlert().catch(console.error);
+                
+                // Immediately reset values and start fresh
+                this.resetStressValues();
+            } else {
+                // Reset if we've collected enough frames but no stress detected
+                this.resetStressValues();
             }
-        }
-
-        if (this.stepsPrintVal > 35 && emotionVal > 0) {
-            this.resetStressValues();
         }
 
         // Update detection list
