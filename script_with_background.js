@@ -1,4 +1,4 @@
-// Initialize GSAP
+// GSAP
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
 gsap.registerPlugin(ScrollTrigger);
@@ -16,14 +16,16 @@ class Particle {
         this.x = Math.random() * window.innerWidth;
         this.y = Math.random() * window.innerHeight;
         this.speedX = (Math.random() - 0.5) * 2;
-        this.speedY = Math.random() * -2 - 1; // Negative for upward movement
+        // make the particles fly up :)
+        this.speedY = Math.random() * -2 - 1;
         this.opacity = Math.random() * 0.5 + 0.2;
         
-        // Set initial styles
+        // set styles
         this.element.style.width = `${this.size}px`;
         this.element.style.height = `${this.size}px`;
         this.element.style.opacity = this.opacity;
-        
+
+        // append to the container
         this.container.appendChild(this.element);
         this.updatePosition();
     }
@@ -36,7 +38,7 @@ class Particle {
         this.x += this.speedX;
         this.y += this.speedY;
 
-        // Reset particle position when it goes off screen
+        // reset particles when they go off screen
         if (this.y < -10) {
             this.y = window.innerHeight + 10;
             this.x = Math.random() * window.innerWidth;
@@ -71,12 +73,12 @@ class ParticleSystem {
         this.createParticles();
         this.animate();
         
-        // Handle window resize
+        // handle the partivcles for different portviews
         window.addEventListener('resize', () => this.handleResize());
     }
 
     createParticles() {
-        // Reduce particle count significantly by increasing the divisor
+        // reduct the total number of particles for optimal performance :)
         const particleCount = Math.floor((window.innerWidth * window.innerHeight) / 25000);
         for (let i = 0; i < particleCount; i++) {
             this.particles.push(new Particle(this.container));
@@ -88,14 +90,15 @@ class ParticleSystem {
         this.lines.forEach(line => line.remove());
         this.lines = [];
 
-        // Draw new lines between nearby particles
+        // draw new lines between nearby particles
         for (let i = 0; i < this.particles.length; i++) {
             for (let j = i + 1; j < this.particles.length; j++) {
                 const p1 = this.particles[i].getPosition();
                 const p2 = this.particles[j].getPosition();
                 const distance = Math.hypot(p1.x - p2.x, p1.y - p2.y);
                 
-                if (distance < 150) { // Connection distance threshold
+                // threshold
+                if (distance < 150) {
                     const opacity = (150 - distance) / 150;
                     const line = document.createElement('div');
                     line.className = 'particle-line';
@@ -125,20 +128,19 @@ class ParticleSystem {
     }
 
     handleResize() {
-        // Clear existing particles and lines
+        // clear particles when resize and regenerate for the new portview
         this.particles.forEach(particle => particle.element.remove());
         this.lines.forEach(line => line.remove());
         this.particles = [];
         this.lines = [];
         
-        // Create new particles for new window size
         this.createParticles();
     }
 }
 
-// Smooth scroll handling
+// smooth scroll
 const smoothScroll = (target) => {
-    const offset = 80; // Adjust this value based on your navbar height
+    const offset = 80;
     const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - offset;
     
     gsap.to(window, {
@@ -148,7 +150,7 @@ const smoothScroll = (target) => {
     });
 };
 
-// Text animation for the main title
+// text animations
 function animateMainTitle() {
     const title = document.querySelector('.hero-content h1');
     const line1 = title.querySelector('.line1');
@@ -176,7 +178,7 @@ function animateMainTitle() {
     });
 }
 
-// Animate elements when they come into view
+// animate elements when they come into view
 function initScrollAnimations() {
     // Feature cards animation
     gsap.utils.toArray('.feature-card').forEach((card, index) => {
@@ -194,7 +196,7 @@ function initScrollAnimations() {
         });
     });
 
-    // Section titles animation
+    // section titles animation
     gsap.utils.toArray('h2').forEach((title) => {
         gsap.from(title, {
             scrollTrigger: {
@@ -221,7 +223,7 @@ function animateFeatures() {
     });
   }
 
-// Progress bar animation
+// progress bar animation (for the info section in demo)
 function initProgressBars() {
     const progressBars = document.querySelectorAll('.progress');
     progressBars.forEach(bar => {
@@ -240,21 +242,21 @@ function initProgressBars() {
     });
 }
 
-// Feedback functionality
+// feedback function for the feedback button
 function initFeedback() {
     const feedbackBtn = document.querySelector('.feedback-btn');
     const modal = document.querySelector('.feedback-modal');
     const closeBtn = document.querySelector('.close-modal');
     const form = document.querySelector('.feedback-form');
 
-    // Hide feedback button initially
+    // hide feedback button initially
     feedbackBtn.style.opacity = '0';
     feedbackBtn.style.visibility = 'hidden';
 
-    // Show/hide feedback button based on scroll position
+    // show/hide feedback button based on scroll position
     window.addEventListener('scroll', () => {
         const scrollPosition = window.scrollY;
-        const showPosition = window.innerHeight * 0.5; // Show after 50% of viewport height
+        const showPosition = window.innerHeight * 0.5;
 
         if (scrollPosition > showPosition) {
             feedbackBtn.style.opacity = '1';
@@ -265,7 +267,7 @@ function initFeedback() {
         }
     });
 
-    // modal functionality
+    // existing modal functionality
     feedbackBtn.addEventListener('click', () => {
         modal.classList.add('active');
     });
@@ -290,7 +292,7 @@ function initFeedback() {
     });
 }
 
-// Login functionality
+// login function
 function initLogin() {
     const loginBtn = document.querySelector('.login-btn');
     const modal = document.querySelector('.login-modal');
@@ -299,7 +301,7 @@ function initLogin() {
     const signupLink = modal.querySelector('.signup-link a');
     const forgotPassword = modal.querySelector('.forgot-password');
 
-    // Open modal
+    // open modal
     loginBtn.addEventListener('click', () => {
         modal.classList.add('active');
     });
@@ -309,32 +311,32 @@ function initLogin() {
         modal.classList.remove('active');
     });
 
-    // Close when clicking outside
+    // close when clicking outside
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.classList.remove('active');
         }
     });
 
-    // Handle form submission
+    // handle form submission
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = form.querySelector('input[type="email"]').value;
         const password = form.querySelector('input[type="password"]').value;
 
         try {
-            // Here you would typically make an API call to your backend
+            // API call to backend (I will do it later)
             console.log('Login attempt:', { email, password });
             
-            // Simulate API call
+            // simulate API call for now
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // For demo purposes, always succeed
+            // for demo purposes, always succeed :)))
             alert('Login successful!');
             modal.classList.remove('active');
             form.reset();
             
-            // Update UI to show logged-in state
+            // update UI to show logged-in state
             loginBtn.textContent = 'Profile';
             
         } catch (error) {
@@ -342,20 +344,20 @@ function initLogin() {
         }
     });
 
-    // Handle signup link click
+    // handle signup link click
     signupLink.addEventListener('click', (e) => {
         e.preventDefault();
         alert('Sign up functionality coming soon!');
     });
 
-    // Handle forgot password click
+    // handle forgot password click
     forgotPassword.addEventListener('click', (e) => {
         e.preventDefault();
         alert('Password reset functionality coming soon!');
     });
 }
 
-// Add after ParticleSystem class and before smoothScroll function
+// add after ParticleSystem class and before smoothScroll function
 class PostureDetector {
     constructor() {
         this.model = null;
@@ -387,7 +389,7 @@ class PostureDetector {
         this.lastAlertTime = 0;
         this.alertCooldown = 1000; // 1 seconds between alerts
 
-        // Add this to ensure sounds are loaded
+        // for debugging
         if (this.alertSound) {
             this.alertSound.load();
             console.log('Alert sound loaded');
@@ -402,7 +404,7 @@ class PostureDetector {
             console.warn('Normal sound element not found');
         }
 
-        // Add stress detection properties
+        // Add overworking detection properties
         this.stressedVal = 0;
         this.stepsPrintVal = 0;
         this.stressStatus = 0;
@@ -438,15 +440,47 @@ class PostureDetector {
 
         // Simplified overwork detection properties
         this.overworkThreshold = 0.3; // 30% threshold for overwork
-        this.minFramesForOverwork = 35; // Minimum frames needed before checking
+        this.minFramesForOverwork = 30; // Minimum frames needed before checking
 
-        // Add these new properties
+        // Add visibility tracking
         this.isTabVisible = true;
+        this.setupVisibilityTracking();
+
+        // Detection loop properties
         this.backgroundInterval = null;
         this.backgroundFPS = 8; // FPS when in background
     }
 
-    // Add this method to reset values
+    setupVisibilityTracking() {
+        document.addEventListener('visibilitychange', () => {
+            this.isTabVisible = document.visibilityState === 'visible';
+            
+            // Clear any existing background interval
+            if (this.backgroundInterval) {
+                clearTimeout(this.backgroundInterval);
+                this.backgroundInterval = null;
+            }
+            
+            // Hide/show visual elements
+            if (this.canvas) {
+                this.canvas.style.display = this.isTabVisible ? 'block' : 'none';
+            }
+            if (this.webcam) {
+                this.webcam.style.display = this.isTabVisible ? 'block' : 'none';
+            }
+
+            // Restart the loop with appropriate timing method
+            if (this.isRunning) {
+                if (this.isTabVisible) {
+                    requestAnimationFrame(() => this.detectLoop());
+                } else {
+                    this.detectLoop();
+                }
+            }
+        });
+    }
+
+    // reset values
     resetStressValues() {
         this.stressedVal = 0;
         this.stepsPrintVal = 0;
@@ -454,7 +488,7 @@ class PostureDetector {
         this.stressStartTime = 0;
     }
 
-    // Add this method to play stress alert
+    // play overworking alert
     async playStressAlert() {
         try {
             if (this.stressSound) {
@@ -519,7 +553,6 @@ class PostureDetector {
         
         try {
             // Setup webcam and canvas
-            this.setupVisibilityTracking();
             this.webcam = document.getElementById('webcam');
             this.canvas = document.getElementById('output-canvas');
             
@@ -531,7 +564,7 @@ class PostureDetector {
             this.canvas.width = 640;
             this.canvas.height = 480;
 
-            // Load Facemesh instead of Blazeface
+            // load Facemesh (468 landmarks)
             this.facemesh = await faceLandmarksDetection.load(
                 faceLandmarksDetection.SupportedPackages.mediapipeFacemesh
             );
@@ -560,7 +593,9 @@ class PostureDetector {
 
             this.isInitialized = true;
             this.isRunning = true;
-            this.detectLoop();
+            
+            // Start the detection loop with setTimeout
+            setTimeout(() => this.detectLoop(), this.intervalTime);
 
             await this.initAudio(); // Initialize audio when starting detector
 
@@ -570,7 +605,7 @@ class PostureDetector {
         }
     }
 
-    async detectLoop(timestamp) {
+    async detectLoop() {
         if (!this.isRunning) return;
         
         try {
@@ -590,6 +625,8 @@ class PostureDetector {
                 if (predictions.length > 0) {
                     const face = predictions[0];
                     const landmarks = face.scaledMesh;
+                    
+                    // Calculate coordinates without drawing if tab is hidden
                     const coords = landmarks.reduce((acc, point) => {
                         acc.minX = Math.min(acc.minX, point[0]);
                         acc.minY = Math.min(acc.minY, point[1]);
@@ -603,45 +640,42 @@ class PostureDetector {
                     let width = Math.round(coords.maxX - coords.minX);
                     let height = Math.round(coords.maxY - coords.minY);
 
-                    // Ensure coordinates are valid (keep this for detection logic)
-                    x = Math.max(0, Math.min(x, this.canvas.width - width));
-                    y = Math.max(0, Math.min(y, this.canvas.height - height));
-                    width = Math.min(width, this.canvas.width - x);
-                    height = Math.min(height, this.canvas.height - y);
+                    // Only draw visual elements if tab is visible
+                    if (this.isTabVisible) {
+                        // Draw high-tech corners
+                        const side_length_x = 0.4 * width;
+                        const side_length_y = 0.4 * height;
+                        const longer_side = Math.max(width, height);
+                        const thickness = Math.max(4, 0.07 * longer_side);
 
-                    // Draw high-tech corners
-                    const side_length_x = 0.4 * width;
-                    const side_length_y = 0.4 * height;
-                    const longer_side = Math.max(width, height);
-                    const thickness = Math.max(4, 0.07 * longer_side);
+                        this.ctx.strokeStyle = '#63B3ED'; // Lighter blue color
+                        this.ctx.lineWidth = thickness;
+                        this.ctx.lineCap = 'round';
 
-                    this.ctx.strokeStyle = '#63B3ED'; // Lighter blue color
-                    this.ctx.lineWidth = thickness;
-                    this.ctx.lineCap = 'round';
+                        // Draw top right corner
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x + width, y);
+                        this.ctx.lineTo(x + width - side_length_x, y);
+                        this.ctx.stroke();
 
-                    // Draw top right corner
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(x + width, y);
-                    this.ctx.lineTo(x + width - side_length_x, y);
-                    this.ctx.stroke();
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x + width, y);
+                        this.ctx.lineTo(x + width, y + side_length_y);
+                        this.ctx.stroke();
 
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(x + width, y);
-                    this.ctx.lineTo(x + width, y + side_length_y);
-                    this.ctx.stroke();
+                        // Draw bottom left corner
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x, y + height);
+                        this.ctx.lineTo(x + side_length_x, y + height);
+                        this.ctx.stroke();
 
-                    // Draw bottom left corner
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(x, y + height);
-                    this.ctx.lineTo(x + side_length_x, y + height);
-                    this.ctx.stroke();
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x, y + height);
+                        this.ctx.lineTo(x, y + height - side_length_y);
+                        this.ctx.stroke();
+                    }
 
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(x, y + height);
-                    this.ctx.lineTo(x, y + height - side_length_y);
-                    this.ctx.stroke();
-
-                    // Create temporary canvas for face processing (keep all this logic)
+                    // Process emotions and update UI regardless of visibility
                     const faceCanvas = document.createElement('canvas');
                     faceCanvas.width = 160;
                     faceCanvas.height = 160;
@@ -653,7 +687,7 @@ class PostureDetector {
                         0, 0, 160, 160
                     );
 
-                    // Process for emotion detection
+                    // Continue with emotion detection and UI updates
                     const emotionPrediction = tf.tidy(() => {
                         return tf.browser.fromPixels(faceCanvas)
                             .mean(2)
@@ -678,6 +712,7 @@ class PostureDetector {
                             confidence: probabilities[index]
                         }));
 
+                    // Update UI only if tab is visible
                     if (this.isTabVisible) {
                         this.updateUI(emotionConfidences, distance);
                     } else {
@@ -694,7 +729,7 @@ class PostureDetector {
             console.error('Detection loop error:', error);
         }
 
-        // Use appropriate timing method based on visibility
+        // Use requestAnimationFrame when visible, setTimeout when hidden
         if (this.isRunning) {
             if (this.isTabVisible) {
                 requestAnimationFrame(() => this.detectLoop());
@@ -703,6 +738,50 @@ class PostureDetector {
                     () => this.detectLoop(), 
                     1000 / this.backgroundFPS
                 );
+            }
+        }
+    }
+
+    calculateEmotionValue(emotionConfidences) {
+        const sortedEmotions = emotionConfidences.sort((a, b) => b.confidence - a.confidence);
+        const mostConfidentEmotion = sortedEmotions[0].emotion;
+        
+        if (['Happy', 'Neutral', 'Surprise'].includes(mostConfidentEmotion)) {
+            this.stressedVal++;
+            this.stepsPrintVal++;
+        } else {
+            this.stressedVal--;
+            this.stepsPrintVal++;
+        }
+
+        return {
+            emotionVal: this.stressedVal / this.stepsPrintVal,
+            sortedEmotions
+        };
+    }
+
+    processAlertsAndTracking(emotionConfidences, distance) {
+        // Process distance alerts
+        if (distance <= 3 || distance > 19) {
+            this.playDistanceAlert(distance > 19).catch(console.error);
+            this.isInGoodPosture = false;
+        } else if (distance > 5 && distance <= 14) {
+            if (this.lastPostureState !== 'good') {
+                this.playNormalDistance().catch(console.error);
+            }
+            this.isInGoodPosture = true;
+        }
+
+        // Process emotions and stress
+        const { emotionVal } = this.calculateEmotionValue(emotionConfidences);
+
+        // Check for overwork
+        if (this.stepsPrintVal >= this.minFramesForOverwork) {
+            if (emotionVal <= this.overworkThreshold) {
+                this.playStressAlert().catch(console.error);
+                this.resetStressValues();
+            } else {
+                this.resetStressValues();
             }
         }
     }
@@ -725,6 +804,9 @@ class PostureDetector {
         const confidenceBar = document.getElementById('posture-confidence');
         const detectionList = document.getElementById('detection-list');
         
+        // Calculate emotion values
+        const { emotionVal, sortedEmotions } = this.calculateEmotionValue(emotionConfidences);
+
         let postureStatus = '';
         let barColor = '';
         
@@ -788,35 +870,6 @@ class PostureDetector {
             confidenceBar.style.width = `${scaledWidth}%`;
             confidenceBar.style.background = barColor;
             confidenceBar.style.transition = 'background-color 0.3s ease, width 0.3s ease';
-        }
-
-        // Process emotions and stress
-        const sortedEmotions = emotionConfidences.sort((a, b) => b.confidence - a.confidence);
-        const mostConfidentEmotion = sortedEmotions[0].emotion;
-        
-        if (['Happy', 'Neutral', 'Surprise'].includes(mostConfidentEmotion)) {
-            this.stressedVal++;
-            this.stepsPrintVal++;
-        } else {
-            this.stressedVal--;
-            this.stepsPrintVal++;
-        }
-
-        const emotionVal = this.stressedVal / this.stepsPrintVal;
-
-        // Simplified overwork detection logic with auto-reset
-        if (this.stepsPrintVal >= this.minFramesForOverwork) {
-            if (emotionVal <= this.overworkThreshold) {
-                console.log('Overwork detected!');
-                console.log('Please take a break!');
-                this.playStressAlert().catch(console.error);
-                
-                // Immediately reset values and start fresh
-                this.resetStressValues();
-            } else {
-                // Reset if we've collected enough frames but no stress detected
-                this.resetStressValues();
-            }
         }
 
         // Update detection list
@@ -901,7 +954,13 @@ class PostureDetector {
             this.isAudioInitialized = false;
         }
 
-        // Add this to clear background interval
+        // Clear the detection interval if it exists
+        if (this.detectionInterval) {
+            clearTimeout(this.detectionInterval);
+            this.detectionInterval = null;
+        }
+
+        // Clear the background interval if it exists
         if (this.backgroundInterval) {
             clearTimeout(this.backgroundInterval);
             this.backgroundInterval = null;
@@ -956,72 +1015,6 @@ class PostureDetector {
         } else {
             this.playNormalDistance().catch(console.error); // Normal distance
         }
-
-    }
-
-    setupVisibilityTracking() {
-        document.addEventListener('visibilitychange', () => {
-            this.isTabVisible = document.visibilityState === 'visible';
-            
-            // Clear any existing background interval
-            if (this.backgroundInterval) {
-                clearTimeout(this.backgroundInterval);
-                this.backgroundInterval = null;
-            }
-            
-            // Hide/show visual elements
-            if (this.canvas) {
-                this.canvas.style.display = this.isTabVisible ? 'block' : 'none';
-            }
-            if (this.webcam) {
-                this.webcam.style.display = this.isTabVisible ? 'block' : 'none';
-            }
-
-            // Restart the loop with appropriate timing method
-            if (this.isRunning) {
-                if (this.isTabVisible) {
-                    requestAnimationFrame(() => this.detectLoop());
-                } else {
-                    this.detectLoop();
-                }
-            }
-        });
-    }
-
-    // Add this new method to handle background processing
-    processAlertsAndTracking(emotionConfidences, distance) {
-        // Process distance alerts
-        if (distance <= 3 || distance > 19) {
-            this.playDistanceAlert(distance > 19).catch(console.error);
-            this.isInGoodPosture = false;
-        } else if (distance > 5 && distance <= 14) {
-            if (this.lastPostureState !== 'good') {
-                this.playNormalDistance().catch(console.error);
-            }
-            this.isInGoodPosture = true;
-        }
-
-        // Process emotions and stress
-        const sortedEmotions = emotionConfidences.sort((a, b) => b.confidence - a.confidence);
-        const mostConfidentEmotion = sortedEmotions[0].emotion;
-        
-        if (['Happy', 'Neutral', 'Surprise'].includes(mostConfidentEmotion)) {
-            this.stressedVal++;
-        } else {
-            this.stressedVal--;
-        }
-        this.stepsPrintVal++;
-
-        // Check for overwork
-        if (this.stepsPrintVal >= this.minFramesForOverwork) {
-            const emotionVal = this.stressedVal / this.stepsPrintVal;
-            if (emotionVal <= this.overworkThreshold) {
-                this.playStressAlert().catch(console.error);
-                this.resetStressValues();
-            } else {
-                this.resetStressValues();
-            }
-        }
     }
 }
 
@@ -1050,10 +1043,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        // Initialize detector but don't start it yet
+        // initialize detector (but not start yet)
         const detector = new PostureDetector();
         
-        // Add start and stop demo button functionality
+        // start and stop demo button functions
         const startDemoBtn = document.getElementById('start-demo');
         const stopDemoBtn = document.getElementById('stop-demo');
         const demoContainer = document.querySelector('.demo-container');
@@ -1088,7 +1081,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        // Handle navigation clicks
+        // navigation clicks
         document.querySelectorAll('nav a').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -1118,12 +1111,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
 
-        // Remove loading overlay
+        // remove loading overlay
         setTimeout(() => {
             document.body.classList.add('loaded');
         }, 500);
 
-        // Hamburger menu functionality
+        // hamburger menu functionality
         const hamburger = document.querySelector('.hamburger');
         const navLinks = document.querySelector('.nav-links');
         
@@ -1132,7 +1125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             navLinks.classList.toggle('active');
         });
 
-        // Close menu when clicking a link
+        // close menu when clicking a link
         document.querySelectorAll('.nav-links a').forEach(link => {
             link.addEventListener('click', () => {
                 hamburger.classList.remove('active');
@@ -1140,7 +1133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
 
-        // Close menu when clicking outside
+        // close menu when clicking outside
         document.addEventListener('click', (e) => {
             if (!hamburger.contains(e.target) && !navLinks.contains(e.target)) {
                 hamburger.classList.remove('active');
@@ -1153,7 +1146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Handle window resize
+// window resize
 window.addEventListener('resize', () => {
     ScrollTrigger.refresh();
 });
